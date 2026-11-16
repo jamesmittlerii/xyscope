@@ -72,6 +72,13 @@ struct ContentView: View {
                         .tint(Theme.phosphor)
                 }
 
+                Toggle("Grid", isOn: $model.showGrid)
+                    .font(.caption)
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                    .tint(Theme.phosphor)
+                    .keyboardShortcut("g", modifiers: [.command])
+
                 HStack(spacing: 8) {
                     Button("Center") {
                         model.center()

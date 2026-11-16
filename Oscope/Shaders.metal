@@ -50,8 +50,15 @@ fragment float4 stroke_fragment(BeamVarying in [[stage_in]]) {
     return float4(color, 1.0);
 }
 
+struct PresentUniforms {
+    float aspect;
+    float showGrid;
+    float2 pad;
+};
+
 fragment float4 present_fragment(Fullscreen in [[stage_in]],
-                                 texture2d<float> source [[texture(0)]]) {
+                                 texture2d<float> source [[texture(0)]],
+                                 constant PresentUniforms &uniforms [[buffer(0)]]) {
     constexpr sampler nearest(filter::nearest, address::clamp_to_edge);
     constexpr sampler softened(filter::linear, address::clamp_to_edge);
     float2 texel = 1.0 / float2(source.get_width(), source.get_height());
@@ -73,5 +80,34 @@ fragment float4 present_fragment(Fullscreen in [[stage_in]],
     float3 color = core + close * float3(0.22, 0.48, 0.16) + wide * float3(0.08, 0.22, 0.06);
     color *= 4.2;
     color = color / (1.0 + color);
+
+    if (uniforms.showGrid > 0.5) {
+        // Match the square plot the beam uses: letterbox to the shorter axis.
+        float aspect = max(uniforms.aspect, 1e-4);
+        float halfX = min(1.0, 1.0 / aspect);
+        float halfY = min(1.0, aspect);
+        float2 clip = float2(in.uv.x * 2.0 - 1.0, 1.0 - in.uv.y * 2.0);
+        float2 plot = float2(clip.x / halfX, clip.y / halfY);
+        float inside = step(max(abs(plot.x), abs(plot.y)), 1.0);
+
+        // Ten major divisions across ±1 (lines at multiples of 0.2), brighter axes.
+        float2 cell = abs(fract(plot * 5.0 + 0.5) - 0.5);
+        float2 pixel = fwidth(plot * 5.0);
+        float lineX = 1.0 - smoothstep(0.0, max(pixel.x * 1.1, 1e-4), cell.x);
+        float lineY = 1.0 - smoothstep(0.0, max(pixel.y * 1.1, 1e-4), cell.y);
+        float major = max(lineX, lineY);
+
+        float axisX = 1.0 - smoothstep(0.0, max(fwidth(plot.x) * 1.25, 1e-4), abs(plot.x));
+        float axisY = 1.0 - smoothstep(0.0, max(fwidth(plot.y) * 1.25, 1e-4), abs(plot.y));
+        float axis = max(axisX, axisY);
+
+        float border = 1.0 - smoothstep(0.0, max(fwidth(max(abs(plot.x), abs(plot.y))) * 1.4, 1e-4),
+                                        abs(max(abs(plot.x), abs(plot.y)) - 1.0));
+
+        float grid = max(major * 0.22, max(axis * 0.45, border * 0.30)) * inside;
+        color += float3(0.20, 0.55, 0.18) * grid;
+        color = color / (1.0 + color * 0.15);
+    }
+
     return float4(color, 1.0);
 }

@@ -9,6 +9,12 @@ struct BeamVertex {
     var pad: Float
 }
 
+struct PresentUniforms {
+    var aspect: Float
+    var showGrid: Float
+    var pad: SIMD2<Float> = .zero
+}
+
 final class ScopeRenderer: NSObject, MTKViewDelegate {
     let device: MTLDevice
     private let queue: MTLCommandQueue
@@ -105,6 +111,11 @@ final class ScopeRenderer: NSObject, MTKViewDelegate {
         guard let presentEncoder = command.makeRenderCommandEncoder(descriptor: presentPass) else { return }
         presentEncoder.setRenderPipelineState(presentPipeline)
         presentEncoder.setFragmentTexture(destination, index: 0)
+        var present = PresentUniforms(
+            aspect: aspect,
+            showGrid: model.showGrid ? 1 : 0
+        )
+        presentEncoder.setFragmentBytes(&present, length: MemoryLayout<PresentUniforms>.stride, index: 0)
         presentEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
         presentEncoder.endEncoding()
 
