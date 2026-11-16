@@ -104,9 +104,10 @@ fragment float4 present_fragment(Fullscreen in [[stage_in]],
         float border = 1.0 - smoothstep(0.0, max(fwidth(max(abs(plot.x), abs(plot.y))) * 1.4, 1e-4),
                                         abs(max(abs(plot.x), abs(plot.y)) - 1.0));
 
-        float grid = max(major * 0.22, max(axis * 0.45, border * 0.30)) * inside;
-        color += float3(0.20, 0.55, 0.18) * grid;
-        color = color / (1.0 + color * 0.15);
+        float grid = max(major * 0.55, max(axis * 0.95, border * 0.70)) * inside;
+        // Add after phosphor tonemap so the graticule stays readable.
+        color += float3(0.40, 0.95, 0.36) * grid;
+        color = min(color, float3(1.0));
     }
 
     return float4(color, 1.0);
