@@ -76,7 +76,9 @@ jobs:
         env:
           BWS_ACCESS_TOKEN: ${{ secrets.BW_ACCESS_TOKEN }}
           # Keep Mac TestFlight on macOS even when the Xcode project also targets iPad.
+          GYM_SDK: macosx
           GYM_DESTINATION: "generic/platform=macOS"
+          GYM_SKIP_PACKAGE_IPA: true
 
       - name: Upload Logs on Failure
         if: failure()
