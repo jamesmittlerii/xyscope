@@ -134,7 +134,11 @@ def image_to_png_bytes(image: Image.Image) -> bytes:
 
 
 def write_icns(path: Path, master: Image.Image) -> None:
+    # Types match `iconutil -c icns` output, including 512 and 512@2x (ic09 / ic10).
     slots = [
+        (b"icp4", 16),
+        (b"icp5", 32),
+        (b"icp6", 64),
         (b"ic07", 128),
         (b"ic08", 256),
         (b"ic09", 512),
