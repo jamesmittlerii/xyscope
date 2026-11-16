@@ -15,6 +15,7 @@ final class ScopeModel: @unchecked Sendable {
     var invertY = true { didSet { storePreferences() } }
     var persistence = 0.25 { didSet { storePreferences() } }
     var beam = 1.0 { didSet { storePreferences() } }
+    var showGrid = false { didSet { storePreferences() } }
 
     var inputDevices: [InputDevice] = []
     var selectedDeviceID: String? {
@@ -94,6 +95,7 @@ final class ScopeModel: @unchecked Sendable {
         static let invertY = "invertY"
         static let persistence = "persistence"
         static let beam = "beam"
+        static let showGrid = "showGrid"
         static let inputName = "inputName"
     }
 
@@ -108,6 +110,7 @@ final class ScopeModel: @unchecked Sendable {
         invertY = defaults.bool(forKey: Prefs.invertY)
         persistence = min(max(defaults.double(forKey: Prefs.persistence), 0.05), 4)
         beam = min(max(defaults.double(forKey: Prefs.beam), 0.4), 2.6)
+        showGrid = defaults.bool(forKey: Prefs.showGrid)
         if let name = defaults.string(forKey: Prefs.inputName),
            let match = inputDevices.first(where: { $0.name == name }) {
             selectedDeviceID = match.id
@@ -125,6 +128,7 @@ final class ScopeModel: @unchecked Sendable {
         defaults.set(invertY, forKey: Prefs.invertY)
         defaults.set(persistence, forKey: Prefs.persistence)
         defaults.set(beam, forKey: Prefs.beam)
+        defaults.set(showGrid, forKey: Prefs.showGrid)
         if let id = selectedDeviceID, let device = inputDevices.first(where: { $0.id == id }) {
             defaults.set(device.name, forKey: Prefs.inputName)
         }
