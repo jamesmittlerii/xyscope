@@ -75,6 +75,8 @@ jobs:
         run: bws run --project-id 9c8584c2-a53a-45fb-a276-b3610119586a -- bundle exec fastlane mac beta
         env:
           BWS_ACCESS_TOKEN: ${{ secrets.BW_ACCESS_TOKEN }}
+          # Keep Mac TestFlight on macOS even when the Xcode project also targets iPad.
+          GYM_DESTINATION: "generic/platform=macOS"
 
       - name: Upload Logs on Failure
         if: failure()
