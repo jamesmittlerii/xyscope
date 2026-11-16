@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Render Lorenz-butterfly icons for iOS, macOS AppIcon sets, and Oscope.icns."""
+"""Render Lorenz-butterfly icons for iOS, macOS AppIcon sets, and Oscope.icns.
+
+Xcode 26.6 actool rejects filenames containing '@' in appiconsets
+("does not have a valid extension") and silently drops every @2x slot —
+which is exactly ITMS-90236. Keep scale in Contents.json and use _2x
+suffixes instead of @2x in the filename.
+"""
 
 from __future__ import annotations
 
@@ -25,18 +31,18 @@ DT = 0.004
 STEPS = 45_000
 TRANSIENT = 2_000
 
-# macOS asset-catalog slots: (filename, point size, scale)
+# (filename without '@', point size, scale) — scale lives in Contents.json.
 MAC_SLOTS = [
     ("icon_16x16.png", 16, 1),
-    ("diana.w@example.org", 16, 2),
+    ("icon_16x16_2x.png", 16, 2),
     ("icon_32x32.png", 32, 1),
-    ("ivan.p@example.net", 32, 2),
+    ("icon_32x32_2x.png", 32, 2),
     ("icon_128x128.png", 128, 1),
-    ("frank.g@example.org", 128, 2),
+    ("icon_128x128_2x.png", 128, 2),
     ("icon_256x256.png", 256, 1),
-    ("wendy.h@example.net", 256, 2),
+    ("icon_256x256_2x.png", 256, 2),
     ("icon_512x512.png", 512, 1),
-    ("walt.e@example.net", 512, 2),
+    ("icon_512x512_2x.png", 512, 2),
 ]
 
 
@@ -157,16 +163,15 @@ def write_icns(path: Path, master: Image.Image) -> None:
 
 
 def write_mac_contents() -> None:
-    images = []
-    for filename, point, scale in MAC_SLOTS:
-        images.append(
-            {
-                "filename": filename,
-                "idiom": "mac",
-                "scale": f"{scale}x",
-                "size": f"{point}x{point}",
-            }
-        )
+    images = [
+        {
+            "filename": filename,
+            "idiom": "mac",
+            "scale": f"{scale}x",
+            "size": f"{point}x{point}",
+        }
+        for filename, point, scale in MAC_SLOTS
+    ]
     payload = {"images": images, "info": {"author": "xcode", "version": 1}}
     (MAC_ICONSET / "Contents.json").write_text(json.dumps(payload, indent=2) + "\n")
 
@@ -189,11 +194,11 @@ def write_ios_contents() -> None:
 def main() -> None:
     icon = render_icon()
 
-    # Mac-only AppIcon — keep iOS out of this set so actool embeds all 10
-    # MultiSized Icon Image renditions (including 512pt @2x) into Assets.car.
     MAC_ICONSET.mkdir(parents=True, exist_ok=True)
-    for stale in MAC_ICONSET.glob("AppIcon*.png"):
-        stale.unlink()
+    # Drop previous PNGs (including legacy '@2x' names actool refuses to compile).
+    for stale in list(MAC_ICONSET.iterdir()):
+        if stale.suffix.lower() == ".png" or "@" in stale.name:
+            stale.unlink()
     for filename, point, scale in MAC_SLOTS:
         px = point * scale
         icon.resize((px, px), Image.Resampling.LANCZOS).save(
@@ -208,7 +213,7 @@ def main() -> None:
     ICNS_PATH.parent.mkdir(parents=True, exist_ok=True)
     write_icns(ICNS_PATH, icon)
 
-    print(f"wrote {MAC_ICONSET.relative_to(ROOT)} ({len(MAC_SLOTS)} macOS sizes)")
+    print(f"wrote {MAC_ICONSET.relative_to(ROOT)} ({len(MAC_SLOTS)} macOS sizes, no '@' names)")
     print(f"wrote {IOS_ICONSET.relative_to(ROOT)}")
     print(f"wrote {ICNS_PATH.relative_to(ROOT)}")
 

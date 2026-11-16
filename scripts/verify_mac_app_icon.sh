@@ -32,47 +32,52 @@ car = sys.argv[1]
 raw = subprocess.check_output(["/usr/bin/assetutil", "--info", car], text=True)
 data = json.loads(raw)
 if not isinstance(data, list):
-    sys.exit("assetutil --info: expected a JSON array")
+    print("error: assetutil --info: expected a JSON array", file=sys.stderr)
+    sys.exit(1)
 
-found_1024 = False
+required = {
+    "icon_16x16.png": (16, 1),
+    "icon_16x16_2x.png": (32, 2),
+    "icon_32x32.png": (32, 1),
+    "icon_32x32_2x.png": (64, 2),
+    "icon_128x128.png": (128, 1),
+    "icon_128x128_2x.png": (256, 2),
+    "icon_256x256.png": (256, 1),
+    "icon_256x256_2x.png": (512, 2),
+    "icon_512x512.png": (512, 1),
+    "icon_512x512_2x.png": (1024, 2),
+}
+
+seen = {}
 appicon = []
 for entry in data:
     if not isinstance(entry, dict) or entry.get("Name") != "AppIcon":
         continue
-    appicon.append(
-        {
-            "AssetType": entry.get("AssetType"),
-            "RenditionName": entry.get("RenditionName"),
-            "PixelWidth": entry.get("PixelWidth"),
-            "PixelHeight": entry.get("PixelHeight"),
-            "Scale": entry.get("Scale"),
-            "SizeClassHorizontal": entry.get("SizeClassHorizontal"),
-            "Idiom": entry.get("Idiom"),
-        }
-    )
-    asset_type = entry.get("AssetType")
+    if entry.get("AssetType") != "Icon Image":
+        continue
+    rendition = entry.get("RenditionName") or ""
     width = entry.get("PixelWidth")
     scale = entry.get("Scale")
-    rendition = entry.get("RenditionName") or ""
-    if asset_type in ("Icon Image", "MultiSized Image", "Image"):
-        if width == 1024 or rendition.endswith("512x512@2x.png") or (
-            scale in (2, 2.0, "2", "2x") and width == 1024
-        ):
-            found_1024 = True
-    # Some actool builds report Scale as 2 with Size 512 points.
-    if asset_type == "Icon Image" and scale in (2, 2.0, "2") and entry.get("PixelHeight") == 1024:
-        found_1024 = True
+    appicon.append({"RenditionName": rendition, "PixelWidth": width, "Scale": scale})
+    if rendition in required:
+        seen[rendition] = (width, scale)
 
 if not appicon:
-    print("error: Assets.car has no AppIcon entries", file=sys.stderr)
+    print("error: Assets.car has no AppIcon Icon Image entries", file=sys.stderr)
     sys.exit(1)
 
-if not found_1024:
+missing = [name for name in required if name not in seen]
+# Accept either naming scheme while migrating off '@2x' filenames.
+if "icon_512x512_2x.png" not in seen and not any(
+    (e.get("PixelWidth") == 1024 and e.get("Scale") in (2, 2.0, "2")) for e in appicon
+):
     print("error: Assets.car missing AppIcon 512pt @2x (1024px) — ITMS-90236", file=sys.stderr)
-    print("AppIcon entries in Assets.car:", file=sys.stderr)
+    print("note: AppIcon Icon Image entries in Assets.car:", file=sys.stderr)
     for row in appicon:
-        print(f"  {row}", file=sys.stderr)
+        print(f"note:   {row}", file=sys.stderr)
+    if missing:
+        print("note: missing renditions: " + ", ".join(missing), file=sys.stderr)
     sys.exit(1)
 
-print(f"Verified AppIcon 512pt @2x in Assets.car ({len(appicon)} AppIcon entries)")
+print(f"Verified AppIcon 512pt @2x in Assets.car ({len(appicon)} Icon Image entries)")
 PY
