@@ -6,8 +6,13 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A10000000000000000000011 /* Oscope.icns in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000010 /* Oscope.icns */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		A10000000000000000000003 /* Oscope.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Oscope.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000010 /* Oscope.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = Oscope.icns; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -33,8 +38,17 @@
 			isa = PBXGroup;
 			children = (
 				A10000000000000000000001 /* Oscope */,
+				A10000000000000000000013 /* Resources */,
 				A10000000000000000000002 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		A10000000000000000000013 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000010 /* Oscope.icns */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 		A10000000000000000000002 /* Products */ = {
@@ -54,6 +68,7 @@
 			buildPhases = (
 				A10000000000000000000005 /* Sources */,
 				A10000000000000000000008 /* Frameworks */,
+				A10000000000000000000012 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -100,6 +115,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A10000000000000000000012 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000011 /* Oscope.icns in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		A10000000000000000000005 /* Sources */ = {
@@ -152,7 +178,6 @@
 		A1000000000000000000000D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = YES;
 				CODE_SIGN_STYLE = Manual;
@@ -162,6 +187,8 @@
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Resources/Info.plist;
+				INFOPLIST_KEY_CFBundleIconFile = Oscope;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Oscope plots the stereo line input as an XY trace.";
@@ -185,7 +212,6 @@
 		A1000000000000000000000E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Oscope/Oscope.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
@@ -196,6 +222,8 @@
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Resources/Info.plist;
+				INFOPLIST_KEY_CFBundleIconFile = Oscope;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
