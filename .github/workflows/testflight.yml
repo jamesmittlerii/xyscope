@@ -6,21 +6,30 @@ permissions:
 
 on:
   workflow_dispatch:
+    inputs:
+      platform:
+        description: TestFlight platform to upload
+        required: true
+        type: choice
+        default: mac
+        options:
+          - mac
+          - ios
 
 concurrency:
-  group: ${{ github.repository }}-release-${{ github.ref }}
+  group: ${{ github.repository }}-release-${{ github.ref }}-${{ inputs.platform }}
   cancel-in-progress: false
 
 jobs:
   deploy-beta:
-    name: Deploy to TestFlight
+    name: Deploy ${{ inputs.platform }} to TestFlight
     runs-on: macos-26
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       CURRENT_BRANCH: ${{ github.ref_name }}
       BWS_VERSION: "1.0.0"
       # Bundle id is com.rheosoft.oscope. The Xcode project is Oscope.xcodeproj;
-      # the macOS lane finds that project itself and uses PROJECT_NAME only for the id.
+      # the lanes find that project themselves and use PROJECT_NAME only for the id.
       PROJECT_NAME: oscope
 
     steps:
@@ -71,18 +80,26 @@ jobs:
       - name: Install Fastlane
         run: bundle install
 
-      - name: Run Fastlane Beta Lane
+      - name: Run Fastlane mac beta
+        if: inputs.platform == 'mac'
         run: bws run --project-id 9c8584c2-a53a-45fb-a276-b3610119586a -- bundle exec fastlane mac beta
         env:
           BWS_ACCESS_TOKEN: ${{ secrets.BW_ACCESS_TOKEN }}
-          # Keep Mac TestFlight on macOS even when the Xcode project also targets iPad.
           GYM_SDK: macosx
           GYM_DESTINATION: "generic/platform=macOS"
           GYM_SKIP_PACKAGE_IPA: true
+
+      - name: Run Fastlane ios beta
+        if: inputs.platform == 'ios'
+        run: bws run --project-id 9c8584c2-a53a-45fb-a276-b3610119586a -- bundle exec fastlane ios beta
+        env:
+          BWS_ACCESS_TOKEN: ${{ secrets.BW_ACCESS_TOKEN }}
+          GYM_SDK: iphoneos
+          GYM_DESTINATION: "generic/platform=iOS"
 
       - name: Upload Logs on Failure
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: gym-logs
+          name: gym-logs-${{ inputs.platform }}
           path: ~/Library/Logs/gym/*.log

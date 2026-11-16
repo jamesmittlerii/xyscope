@@ -13,6 +13,7 @@ Display XY plots of chaotic functions from The Analog Thing, starting with the L
 - First attractor to get right: Lorenz from The Analog Thing.
 - James Mittler II owns the product decisions.
 - Live signal checks with The Analog Thing and a Behringer UCA202 run on the Mac mini (James, 2026-11-16). iPad checks use the same UCA202 through Apple’s Camera Connection Kit / USB-C adapter.
+- TestFlight needs separate uploads: Mac (`fastlane mac beta`) and iPad/iOS (`fastlane ios beta`). One Xcode target, two binaries.
 
 ## Out of scope for the first plan
 
