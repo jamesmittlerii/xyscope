@@ -9,6 +9,9 @@ struct ContentView: View {
             ScopeView(model: model)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(.black)
+                #if !os(macOS)
+                .ignoresSafeArea()
+                #endif
             if optionsVisible {
                 sidebar
             }

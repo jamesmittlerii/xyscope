@@ -1,10 +1,13 @@
 import AVFoundation
-import CoreAudio
 import Foundation
 import os
 
+#if os(macOS)
+import CoreAudio
+#endif
+
 struct InputDevice: Identifiable, Hashable, Sendable {
-    var id: AudioDeviceID
+    var id: String
     var name: String
     var manufacturer: String
 }
@@ -19,6 +22,7 @@ enum CaptureError: LocalizedError {
     case noStereoInput
     case unsupportedFormat(String)
     case cannotStart(OSStatus)
+    case cannotConfigure(String)
 
     var errorDescription: String? {
         switch self {
@@ -28,24 +32,35 @@ enum CaptureError: LocalizedError {
             return "The input format is not stereo PCM (\(detail))."
         case .cannotStart(let status):
             return "Could not start the input (\(status))."
+        case .cannotConfigure(let detail):
+            return "Could not configure the input (\(detail))."
         }
     }
 }
 
-/// HAL input. The IO callback only copies samples into the ring.
+/// Captures stereo line input into the ring. macOS uses the Core Audio HAL;
+/// iPadOS uses AVAudioEngine so class-compliant USB interfaces (UCA202) work
+/// through the Camera Connection Kit / USB-C adapter.
 final class AudioCapture: @unchecked Sendable {
     private let ring: SampleRing
     private let log = Logger(subsystem: "com.rheosoft.oscope", category: "audio")
+
+    private let scratch: UnsafeMutablePointer<Float>
+    private let scratchFrames = 8_192
+
+    #if os(macOS)
     private var deviceID: AudioDeviceID = 0
     private var procID: AudioDeviceIOProcID?
     private var sampleKind: SampleKind = .float32
-    private let scratch: UnsafeMutablePointer<Float>
-    private let scratchFrames = 8_192
 
     private enum SampleKind {
         case float32
         case int16
     }
+    #else
+    private let engine = AVAudioEngine()
+    private var runningDeviceID: String?
+    #endif
 
     init(ring: SampleRing) {
         self.ring = ring
@@ -58,15 +73,7 @@ final class AudioCapture: @unchecked Sendable {
         scratch.deallocate()
     }
 
-    static func inputDevices() -> [InputDevice] {
-        deviceIDs().compactMap { id in
-            let channels = inputChannelCount(id)
-            guard channels >= 2 else { return nil }
-            return InputDevice(id: id, name: stringProperty(id, kAudioObjectPropertyName), manufacturer: stringProperty(id, kAudioObjectPropertyManufacturer))
-        }
-    }
-
-    static func preferredDevice(in devices: [InputDevice]) -> AudioDeviceID? {
+    static func preferredDevice(in devices: [InputDevice]) -> String? {
         if let named = devices.first(where: { $0.name.localizedCaseInsensitiveContains("UCA202") }) {
             return named.id
         }
@@ -80,37 +87,67 @@ final class AudioCapture: @unchecked Sendable {
         if let codec = codecs.first {
             return codec.id
         }
-        if let fallback = defaultInputID(), devices.contains(where: { $0.id == fallback }) {
-            return fallback
+        if let usb = devices.first(where: {
+            $0.name.localizedCaseInsensitiveContains("USB")
+                || $0.manufacturer.localizedCaseInsensitiveContains("USB")
+        }) {
+            return usb.id
         }
+        #if os(macOS)
+        if let fallback = defaultInputID(), devices.contains(where: { $0.id == String(fallback) }) {
+            return String(fallback)
+        }
+        #else
+        if let current = AVAudioSession.sharedInstance().preferredInput?.uid
+            ?? AVAudioSession.sharedInstance().currentRoute.inputs.first?.uid,
+           devices.contains(where: { $0.id == current }) {
+            return current
+        }
+        #endif
         return devices.first?.id
     }
 
-    func start(device id: AudioDeviceID) throws -> CaptureStatus {
+    #if os(macOS)
+    static func inputDevices() -> [InputDevice] {
+        deviceIDs().compactMap { id in
+            let channels = inputChannelCount(id)
+            guard channels >= 2 else { return nil }
+            return InputDevice(
+                id: String(id),
+                name: stringProperty(id, kAudioObjectPropertyName),
+                manufacturer: stringProperty(id, kAudioObjectPropertyManufacturer)
+            )
+        }
+    }
+
+    func start(device id: String) throws -> CaptureStatus {
+        guard let numericID = AudioDeviceID(id) else {
+            throw CaptureError.cannotConfigure("Unknown device \(id)")
+        }
         stop()
-        let format = try streamFormat(id)
+        let format = try streamFormat(numericID)
         sampleKind = format.kind
-        try lockSampleRate(id)
-        let frames = setBufferFrames(id, preferred: 1_024)
-        let rate = nominalSampleRate(id)
+        try lockSampleRate(numericID)
+        let frames = setBufferFrames(numericID, preferred: 1_024)
+        let rate = nominalSampleRate(numericID)
 
         let unmanaged = Unmanaged.passUnretained(self).toOpaque()
         var proc: AudioDeviceIOProcID?
-        let created = AudioDeviceCreateIOProcIDWithBlock(&proc, id, nil) { _, inputData, _, _, _ in
+        let created = AudioDeviceCreateIOProcIDWithBlock(&proc, numericID, nil) { _, inputData, _, _, _ in
             let capture = Unmanaged<AudioCapture>.fromOpaque(unmanaged).takeUnretainedValue()
             capture.consume(inputData)
         }
         guard created == noErr, let proc else {
             throw CaptureError.cannotStart(created)
         }
-        let started = AudioDeviceStart(id, proc)
+        let started = AudioDeviceStart(numericID, proc)
         if started != noErr {
-            AudioDeviceDestroyIOProcID(id, proc)
+            AudioDeviceDestroyIOProcID(numericID, proc)
             throw CaptureError.cannotStart(started)
         }
-        deviceID = id
+        deviceID = numericID
         procID = proc
-        let name = Self.stringProperty(id, kAudioObjectPropertyName)
+        let name = Self.stringProperty(numericID, kAudioObjectPropertyName)
         log.info("Opened \(name, privacy: .public) at \(rate, format: .fixed(precision: 0)) Hz, \(frames) frames, \(String(describing: format.kind), privacy: .public)")
         return CaptureStatus(deviceName: name, sampleRate: rate, bufferFrames: frames)
     }
@@ -121,7 +158,114 @@ final class AudioCapture: @unchecked Sendable {
         AudioDeviceDestroyIOProcID(deviceID, procID)
         self.procID = nil
     }
+    #else
+    static func inputDevices() -> [InputDevice] {
+        let session = AVAudioSession.sharedInstance()
+        prepareSession(session)
+        let ports = session.availableInputs ?? []
+        return ports.map { port in
+            InputDevice(
+                id: port.uid,
+                name: port.portName,
+                manufacturer: port.portType.rawValue
+            )
+        }
+    }
 
+    func start(device id: String) throws -> CaptureStatus {
+        stop()
+        let session = AVAudioSession.sharedInstance()
+        try Self.configureSession(session)
+        if let preferred = session.availableInputs?.first(where: { $0.uid == id }) {
+            try session.setPreferredInput(preferred)
+        }
+        try session.setActive(true, options: [])
+        engine.reset()
+
+        let input = engine.inputNode
+        let format = input.inputFormat(forBus: 0)
+        guard format.channelCount >= 2 else {
+            throw CaptureError.noStereoInput
+        }
+        guard format.commonFormat == .pcmFormatFloat32 else {
+            throw CaptureError.unsupportedFormat("\(format.commonFormat)")
+        }
+
+        let bufferFrames = max(Int((session.ioBufferDuration * format.sampleRate).rounded()), 256)
+        let unmanaged = Unmanaged.passUnretained(self).toOpaque()
+        input.installTap(onBus: 0, bufferSize: AVAudioFrameCount(bufferFrames), format: format) { buffer, _ in
+            let capture = Unmanaged<AudioCapture>.fromOpaque(unmanaged).takeUnretainedValue()
+            capture.consume(buffer: buffer, channels: Int(format.channelCount))
+        }
+
+        do {
+            engine.prepare()
+            try engine.start()
+        } catch {
+            input.removeTap(onBus: 0)
+            throw CaptureError.cannotConfigure(error.localizedDescription)
+        }
+        runningDeviceID = id
+        let name = session.currentRoute.inputs.first?.portName
+            ?? session.preferredInput?.portName
+            ?? "Audio Input"
+        let rate = format.sampleRate
+        log.info("Opened \(name, privacy: .public) at \(rate, format: .fixed(precision: 0)) Hz, \(bufferFrames) frames")
+        return CaptureStatus(deviceName: name, sampleRate: rate, bufferFrames: bufferFrames)
+    }
+
+    func stop() {
+        guard runningDeviceID != nil else { return }
+        engine.inputNode.removeTap(onBus: 0)
+        if engine.isRunning {
+            engine.stop()
+        }
+        runningDeviceID = nil
+    }
+
+    private static func prepareSession(_ session: AVAudioSession) {
+        try? configureSession(session)
+        try? session.setActive(true, options: [])
+    }
+
+    private static func configureSession(_ session: AVAudioSession) throws {
+        do {
+            try session.setCategory(.playAndRecord, mode: .measurement, options: [.mixWithOthers])
+            try session.setPreferredSampleRate(48_000)
+            try session.setPreferredIOBufferDuration(1_024.0 / 48_000.0)
+        } catch {
+            throw CaptureError.cannotConfigure(error.localizedDescription)
+        }
+    }
+
+    private func consume(buffer: AVAudioPCMBuffer, channels: Int) {
+        guard let channelData = buffer.floatChannelData, channels >= 2 else { return }
+        let frames = Int(buffer.frameLength)
+        guard frames > 0 else { return }
+        if buffer.stride == 1 {
+            var remaining = frames
+            var offset = 0
+            let left = channelData[0]
+            let right = channelData[1]
+            while remaining > 0 {
+                let count = min(remaining, scratchFrames)
+                for frame in 0..<count {
+                    scratch[frame * 2] = left[offset + frame]
+                    scratch[frame * 2 + 1] = right[offset + frame]
+                }
+                ring.writeInterleaved(scratch, frameCount: count)
+                offset += count
+                remaining -= count
+            }
+        } else {
+            ring.writeInterleaved(channelData[0], frameCount: frames)
+        }
+    }
+    #endif
+}
+
+#if os(macOS)
+private extension AudioCapture {
     private func consume(_ inputData: UnsafePointer<AudioBufferList>) {
         let count = Int(inputData.pointee.mNumberBuffers)
         guard count > 0 else { return }
@@ -386,3 +530,4 @@ final class AudioCapture: @unchecked Sendable {
         return raw.load(as: Unmanaged<CFString>.self).takeRetainedValue() as String
     }
 }
+#endif
