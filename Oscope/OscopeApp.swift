@@ -6,6 +6,7 @@ struct OscopeApp: App {
     @AppStorage("optionsVisible") private var optionsVisible = true
 
     var body: some Scene {
+        #if os(macOS)
         Window("Oscope", id: "oscope") {
             ContentView(model: model)
                 .frame(minWidth: 880, minHeight: 620)
@@ -25,5 +26,10 @@ struct OscopeApp: App {
                     .keyboardShortcut("9", modifiers: [.command])
             }
         }
+        #else
+        WindowGroup {
+            ContentView(model: model)
+        }
+        #endif
     }
 }

@@ -1,6 +1,9 @@
 import AVFoundation
-import CoreAudio
 import Observation
+
+#if os(macOS)
+import CoreAudio
+#endif
 
 @Observable
 final class ScopeModel: @unchecked Sendable {
@@ -14,7 +17,7 @@ final class ScopeModel: @unchecked Sendable {
     var beam = 1.0 { didSet { storePreferences() } }
 
     var inputDevices: [InputDevice] = []
-    var selectedDeviceID: AudioDeviceID? {
+    var selectedDeviceID: String? {
         didSet {
             storePreferences()
             guard !suppressDeviceRestart, selectedDeviceID != oldValue else { return }
@@ -28,6 +31,9 @@ final class ScopeModel: @unchecked Sendable {
     private let capture: AudioCapture
     private var inputRequest = 0
     private var suppressDeviceRestart = false
+    #if !os(macOS)
+    private var routeObserver: NSObjectProtocol?
+    #endif
 
     init() {
         let ring = SampleRing()
@@ -43,6 +49,11 @@ final class ScopeModel: @unchecked Sendable {
     }
 
     deinit {
+        #if !os(macOS)
+        if let routeObserver {
+            NotificationCenter.default.removeObserver(routeObserver)
+        }
+        #endif
         capture.stop()
     }
 
@@ -146,17 +157,25 @@ final class ScopeModel: @unchecked Sendable {
                         self.openInput(deviceID, token: token)
                     } else {
                         self.status = "Input blocked"
-                        self.inputError = "Microphone access is off for Oscope. Turn it on in System Settings › Privacy & Security › Microphone."
+                        self.inputError = Self.microphoneDeniedMessage
                     }
                 }
             }
         default:
             status = "Input blocked"
-            inputError = "Microphone access is off for Oscope. Turn it on in System Settings › Privacy & Security › Microphone."
+            inputError = Self.microphoneDeniedMessage
         }
     }
 
-    private func openInput(_ deviceID: AudioDeviceID, token: Int) {
+    private static var microphoneDeniedMessage: String {
+        #if os(macOS)
+        "Microphone access is off for Oscope. Turn it on in System Settings › Privacy & Security › Microphone."
+        #else
+        "Microphone access is off for Oscope. Turn it on in Settings › Oscope › Microphone."
+        #endif
+    }
+
+    private func openInput(_ deviceID: String, token: Int) {
         guard inputRequest == token else { return }
         do {
             let opened = try capture.start(device: deviceID)
@@ -170,6 +189,7 @@ final class ScopeModel: @unchecked Sendable {
     }
 
     private func watchDevices() {
+        #if os(macOS)
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyDevices,
             mScope: kAudioObjectPropertyScopeGlobal,
@@ -178,6 +198,15 @@ final class ScopeModel: @unchecked Sendable {
         AudioObjectAddPropertyListenerBlock(AudioObjectID(kAudioObjectSystemObject), &address, .main) { [weak self] _, _ in
             self?.refreshDevices()
         }
+        #else
+        routeObserver = NotificationCenter.default.addObserver(
+            forName: AVAudioSession.routeChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.refreshDevices()
+        }
+        #endif
     }
 
     private func refreshDevices() {
@@ -186,6 +215,11 @@ final class ScopeModel: @unchecked Sendable {
         let stillPresent = selectedDeviceID.map { id in devices.contains { $0.id == id } } ?? false
         if !stillPresent {
             selectedDeviceID = AudioCapture.preferredDevice(in: devices)
+            return
         }
+        #if !os(macOS)
+        // USB route changes keep the same port UID; reopen so the engine picks up stereo.
+        beginInput()
+        #endif
     }
 }

@@ -1,6 +1,6 @@
 # Oscope build plan
 
-Native Mac XY oscilloscope. Stereo USB line-in is the only input. The first picture that has to be right is the Lorenz butterfly from The Analog Thing. Firmware, custom hardware, and non-Mac targets stay out.
+Native Mac and iPad XY oscilloscope. Stereo USB line-in is the only input. The first picture that has to be right is the Lorenz butterfly from The Analog Thing. Firmware and custom hardware stay out. iPad uses the same UCA202-class interface over USB (Lightning or USB-C adapter) via AVAudioEngine; Mac keeps the Core Audio HAL path.
 
 Numbers below are from the Behringer UCA202 user manual and The Analog Thing First Steps (v2) plus the THAT output docs. Rear-jack impedance is the project wiki’s “a few kilohms”; the manuals do not publish the resistor values.
 
@@ -22,7 +22,7 @@ Run Lorenz at normal integrator speed, mode OP. Unpatched, an integrator held at
 
 One SwiftUI window. Four pieces, no third-party dependencies.
 
-**Capture.** A small Swift type owns a Core Audio HAL input via `AudioDeviceCreateIOProcID` (an input-only HAL AudioUnit is an acceptable stand-in if opening the stream that way is simpler). Choose the UCA202 by name when it is present, otherwise the default input, with a device menu only when more than one input exists. Enable input, leave output disabled, and run at the device rate with no voice-processing unit and no sample-rate converter in the graph. The IO callback writes samples into the ring and returns. No allocation and no lock that can wait.
+**Capture.** On Mac, a small Swift type owns a Core Audio HAL input via `AudioDeviceCreateIOProcID` (an input-only HAL AudioUnit is an acceptable stand-in if opening the stream that way is simpler). On iPad, the same type opens an `AVAudioEngine` input tap after configuring `AVAudioSession` for measurement / 48 kHz, so a class-compliant UCA202 shows up through Apple’s USB adapter. Choose the UCA202 by name when it is present, otherwise the default input, with a device menu only when more than one input exists. Enable input, leave output unused, and run at the device rate with no voice-processing unit and no sample-rate converter in the graph. The IO callback writes samples into the ring and returns. No allocation and no lock that can wait.
 
 **Ring.** Single-producer, single-consumer, power-of-two, about one second of stereo frames. The IO proc is the only writer. The display thread is the only reader. If the reader falls behind, drop the oldest contiguous span and break the line. The ring only carries samples from the callback to the display. Phosphor lives in a texture, not in this buffer.
 

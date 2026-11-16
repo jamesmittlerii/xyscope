@@ -1,6 +1,6 @@
 # Oscope
 
-Mac XY oscilloscope for chaotic analog computers.
+Mac and iPad XY oscilloscope for chaotic analog computers.
 
 ## Goal
 
@@ -8,12 +8,12 @@ Display XY plots of chaotic functions from The Analog Thing, starting with the L
 
 ## Constraints
 
-- Native Mac app. Stack is Swift unless James says otherwise.
-- Input is USB audio (Core Audio), not a dedicated DAQ.
+- Native Swift app for Mac and iPad.
+- Input is USB audio: Core Audio HAL on Mac, AVAudioEngine + AVAudioSession on iPad. Not a dedicated DAQ.
 - First attractor to get right: Lorenz from The Analog Thing.
 - James Mittler II owns the product decisions.
-- Do the work on the Mac mini, not a cloud VM (James, 2026-11-16). The Analog Thing and a Behringer UCA202 are plugged into that Mac. Live signal checks run there.
+- Live signal checks with The Analog Thing and a Behringer UCA202 run on the Mac mini (James, 2026-11-16). iPad checks use the same UCA202 through Apple’s Camera Connection Kit / USB-C adapter.
 
 ## Out of scope for the first plan
 
-Firmware, custom hardware, and non-Mac targets.
+Firmware and custom hardware.
