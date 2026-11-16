@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render a bright Lorenz-butterfly app icon for iOS, macOS, and legacy ICNS."""
+"""Render Lorenz-butterfly icons for iOS, macOS AppIcon sets, and Oscope.icns."""
 
 from __future__ import annotations
 
@@ -12,12 +12,12 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = Path(__file__).resolve().parents[1]
-ICONSET = ROOT / "Oscope/Assets.xcassets/AppIcon.appiconset"
-MASTER_NAME = "AppIcon.png"
+ASSETS = ROOT / "Oscope/Assets.xcassets"
+MAC_ICONSET = ASSETS / "AppIcon.appiconset"
+IOS_ICONSET = ASSETS / "AppIconiOS.appiconset"
 ICNS_PATH = ROOT / "Resources/Oscope.icns"
 
 SIZE = 1024
-# Classic Lorenz parameters; front view is x vs z.
 SIGMA = 10.0
 RHO = 28.0
 BETA = 8.0 / 3.0
@@ -134,7 +134,6 @@ def image_to_png_bytes(image: Image.Image) -> bytes:
 
 
 def write_icns(path: Path, master: Image.Image) -> None:
-    # Types match `iconutil -c icns` output, including 512 and 512@2x (ic09 / ic10).
     slots = [
         (b"icp4", 16),
         (b"icp5", 32),
@@ -157,15 +156,8 @@ def write_icns(path: Path, master: Image.Image) -> None:
     path.write_bytes(b"icns" + struct.pack(">I", len(body) + 8) + body)
 
 
-def write_contents_json() -> None:
-    images = [
-        {
-            "filename": MASTER_NAME,
-            "idiom": "universal",
-            "platform": "ios",
-            "size": "1024x1024",
-        }
-    ]
+def write_mac_contents() -> None:
+    images = []
     for filename, point, scale in MAC_SLOTS:
         images.append(
             {
@@ -176,26 +168,48 @@ def write_contents_json() -> None:
             }
         )
     payload = {"images": images, "info": {"author": "xcode", "version": 1}}
-    (ICONSET / "Contents.json").write_text(json.dumps(payload, indent=2) + "\n")
+    (MAC_ICONSET / "Contents.json").write_text(json.dumps(payload, indent=2) + "\n")
+
+
+def write_ios_contents() -> None:
+    payload = {
+        "images": [
+            {
+                "filename": "AppIcon.png",
+                "idiom": "universal",
+                "platform": "ios",
+                "size": "1024x1024",
+            }
+        ],
+        "info": {"author": "xcode", "version": 1},
+    }
+    (IOS_ICONSET / "Contents.json").write_text(json.dumps(payload, indent=2) + "\n")
 
 
 def main() -> None:
     icon = render_icon()
-    ICONSET.mkdir(parents=True, exist_ok=True)
-    master_path = ICONSET / MASTER_NAME
-    icon.save(master_path, format="PNG", optimize=True)
 
+    # Mac-only AppIcon — keep iOS out of this set so actool embeds all 10
+    # MultiSized Icon Image renditions (including 512pt @2x) into Assets.car.
+    MAC_ICONSET.mkdir(parents=True, exist_ok=True)
+    for stale in MAC_ICONSET.glob("AppIcon*.png"):
+        stale.unlink()
     for filename, point, scale in MAC_SLOTS:
         px = point * scale
         icon.resize((px, px), Image.Resampling.LANCZOS).save(
-            ICONSET / filename, format="PNG", optimize=True
+            MAC_ICONSET / filename, format="PNG", optimize=True
         )
+    write_mac_contents()
 
-    write_contents_json()
+    IOS_ICONSET.mkdir(parents=True, exist_ok=True)
+    icon.save(IOS_ICONSET / "AppIcon.png", format="PNG", optimize=True)
+    write_ios_contents()
+
     ICNS_PATH.parent.mkdir(parents=True, exist_ok=True)
     write_icns(ICNS_PATH, icon)
-    print(f"wrote {master_path.relative_to(ROOT)}")
-    print(f"wrote {len(MAC_SLOTS)} macOS icon sizes in {ICONSET.relative_to(ROOT)}")
+
+    print(f"wrote {MAC_ICONSET.relative_to(ROOT)} ({len(MAC_SLOTS)} macOS sizes)")
+    print(f"wrote {IOS_ICONSET.relative_to(ROOT)}")
     print(f"wrote {ICNS_PATH.relative_to(ROOT)}")
 
 
