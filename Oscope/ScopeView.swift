@@ -13,7 +13,9 @@ struct ScopeView: NSViewRepresentable {
         makeMetalView(coordinator: context.coordinator)
     }
 
-    func updateNSView(_ nsView: MTKView, context: Context) {}
+    func updateNSView(_: MTKView, context _: Context) {
+        // Model is observed by the renderer each frame; nothing to push from SwiftUI.
+    }
 }
 #else
 struct ScopeView: UIViewRepresentable {
@@ -27,7 +29,9 @@ struct ScopeView: UIViewRepresentable {
         makeMetalView(coordinator: context.coordinator)
     }
 
-    func updateUIView(_ uiView: MTKView, context: Context) {}
+    func updateUIView(_: MTKView, context _: Context) {
+        // Model is observed by the renderer each frame; nothing to push from SwiftUI.
+    }
 }
 #endif
 
