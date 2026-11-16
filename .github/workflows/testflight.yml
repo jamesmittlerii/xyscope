@@ -5,26 +5,20 @@ permissions:
   id-token: write
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
-    inputs:
-      platform:
-        description: TestFlight platform to upload
-        required: true
-        type: choice
-        default: mac
-        options:
-          - mac
-          - ios
 
 concurrency:
-  group: ${{ github.repository }}-release-${{ github.ref }}-${{ inputs.platform }}
+  group: ${{ github.repository }}-testflight-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   deploy-beta:
-    name: Deploy ${{ inputs.platform }} to TestFlight
+    name: Deploy macOS + iOS to TestFlight
     runs-on: macos-26
-    timeout-minutes: 45
+    timeout-minutes: 90
     env:
       CURRENT_BRANCH: ${{ github.ref_name }}
       BWS_VERSION: "1.0.0"
@@ -80,26 +74,17 @@ jobs:
       - name: Install Fastlane
         run: bundle install
 
-      - name: Run Fastlane mac beta
-        if: inputs.platform == 'mac'
-        run: bws run --project-id 9c8584c2-a53a-45fb-a276-b3610119586a -- bundle exec fastlane mac beta
+      # Bumps CURRENT_PROJECT_VERSION once, then archives/uploads macOS and iOS
+      # with that same build number. The bump commit uses [skip ci] so it does
+      # not re-trigger this workflow.
+      - name: Run Fastlane beta (macOS + iOS)
+        run: bws run --project-id 9c8584c2-a53a-45fb-a276-b3610119586a -- bundle exec fastlane beta
         env:
           BWS_ACCESS_TOKEN: ${{ secrets.BW_ACCESS_TOKEN }}
-          GYM_SDK: macosx
-          GYM_DESTINATION: "generic/platform=macOS"
-          GYM_SKIP_PACKAGE_IPA: true
-
-      - name: Run Fastlane ios beta
-        if: inputs.platform == 'ios'
-        run: bws run --project-id 9c8584c2-a53a-45fb-a276-b3610119586a -- bundle exec fastlane ios beta
-        env:
-          BWS_ACCESS_TOKEN: ${{ secrets.BW_ACCESS_TOKEN }}
-          GYM_SDK: iphoneos
-          GYM_DESTINATION: "generic/platform=iOS"
 
       - name: Upload Logs on Failure
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: gym-logs-${{ inputs.platform }}
+          name: gym-logs
           path: ~/Library/Logs/gym/*.log
