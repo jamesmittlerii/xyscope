@@ -1,0 +1,84 @@
+name: TestFlight
+
+permissions:
+  contents: write
+  id-token: write
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.repository }}-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy-beta:
+    name: Deploy to TestFlight
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      CURRENT_BRANCH: ${{ github.ref_name }}
+      BWS_VERSION: "1.0.0"
+      # Bundle id is com.rheosoft.oscope. The Xcode project is Oscope.xcodeproj;
+      # the macOS lane finds that project itself and uses PROJECT_NAME only for the id.
+      PROJECT_NAME: oscope
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Sync to latest branch head
+        run: |
+          git fetch origin "${{ github.ref_name }}"
+          git checkout "${{ github.ref_name }}"
+          git reset --hard "origin/${{ github.ref_name }}"
+
+      - name: Select Xcode
+        run: /usr/bin/xcodebuild -version
+
+      - name: Prepare local bin path
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Cache Bitwarden Secrets Manager CLI (bws)
+        id: cache-bws
+        uses: actions/cache@v5
+        with:
+          path: ~/.local/bin/bws
+          key: bws-${{ runner.os }}-${{ runner.arch }}-${{ env.BWS_VERSION }}
+
+      - name: Install Bitwarden Secrets Manager CLI (bws)
+        if: steps.cache-bws.outputs.cache-hit != 'true'
+        run: |
+          curl -L -o bws.zip "https://github.com/bitwarden/sdk/releases/download/bws-v${{ env.BWS_VERSION }}/bws-aarch64-apple-darwin-${{ env.BWS_VERSION }}.zip"
+          unzip -q bws.zip -d "$HOME/.local/bin"
+          chmod +x "$HOME/.local/bin/bws"
+
+      - name: Verify bws install
+        run: bws --version
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Install Fastlane
+        run: bundle install
+
+      - name: Run Fastlane Beta Lane
+        run: bws run --project-id 9c8584c2-a53a-45fb-a276-b3610119586a -- bundle exec fastlane mac beta
+        env:
+          BWS_ACCESS_TOKEN: ${{ secrets.BW_ACCESS_TOKEN }}
+
+      - name: Upload Logs on Failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gym-logs
+          path: ~/Library/Logs/gym/*.log
