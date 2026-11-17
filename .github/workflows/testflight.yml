@@ -72,11 +72,11 @@ jobs:
           ruby-version: "3.4"
           bundler-cache: true
 
-      # Bumps CURRENT_PROJECT_VERSION once, then archives/uploads macOS and iOS
+      # Bumps CURRENT_PROJECT_VERSION once, then archives/uploads iOS and macOS
       # with that same build number. The bump commit uses [skip ci] so it does
       # not re-trigger this workflow.
-      - name: Run Fastlane beta (macOS + iOS)
-        run: bws run --project-id 9c8584c2-a53a-45fb-a276-b3610119586a -- bundle exec fastlane beta
+      - name: Run Fastlane ship_beta (iOS + macOS)
+        run: bws run --project-id 9c8584c2-a53a-45fb-a276-b3610119586a -- bundle exec fastlane ship_beta
         env:
           BWS_ACCESS_TOKEN: ${{ secrets.BW_ACCESS_TOKEN }}
 
