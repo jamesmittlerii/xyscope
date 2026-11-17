@@ -1,0 +1,27 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build Oscope (Mac)",
+      "type": "shell",
+      "command": "xcodebuild -project Oscope.xcodeproj -scheme Oscope -configuration Debug -destination 'platform=macOS' -derivedDataPath build build",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Oscope (Mac)",
+      "type": "shell",
+      "command": "xcodebuild -project Oscope.xcodeproj -scheme Oscope -configuration Debug -destination 'platform=macOS' -derivedDataPath build build && open \"${workspaceFolder}/build/Build/Products/Debug/Oscope.app\"",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

@@ -35,6 +35,7 @@ struct ScopeView: UIViewRepresentable {
 }
 #endif
 
+@MainActor
 private func makeMetalView(coordinator: ScopeRenderer) -> MTKView {
     let view = MTKView()
     view.device = coordinator.device

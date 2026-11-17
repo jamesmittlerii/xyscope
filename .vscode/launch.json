@@ -1,0 +1,12 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Oscope (Mac)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "xcodebuild -project Oscope.xcodeproj -scheme Oscope -configuration Debug -destination 'platform=macOS' -derivedDataPath build build && open \"${workspaceFolder}/build/Build/Products/Debug/Oscope.app\"",
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

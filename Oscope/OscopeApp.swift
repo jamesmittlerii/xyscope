@@ -8,8 +8,11 @@ struct OscopeApp: App {
     var body: some Scene {
         #if os(macOS)
         Window("XY Oscilloscope", id: "oscope") {
-            ContentView(model: model)
-                .frame(minWidth: 880, minHeight: 620)
+            NavigationStack {
+                ContentView(model: model)
+                    .navigationTitle("XY Oscilloscope")
+                    .frame(minWidth: 880, minHeight: 620)
+            }
         }
         .defaultSize(width: 1120, height: 740)
         .windowResizability(.contentMinSize)
