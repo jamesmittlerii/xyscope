@@ -58,7 +58,10 @@ final class ScopeRenderer: NSObject, MTKViewDelegate {
         sampleStorage.deallocate()
     }
 
-    func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
+    func mtkView(_: MTKView, drawableSizeWillChange _: CGSize) {
+        // Drawable size changes are handled lazily in draw(in:) via ensureTextures.
+    }
+
 
     func draw(in view: MTKView) {
         let size = view.drawableSize

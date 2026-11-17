@@ -196,7 +196,7 @@ def main() -> None:
 
     MAC_ICONSET.mkdir(parents=True, exist_ok=True)
     # Drop previous PNGs (including legacy '@2x' names actool refuses to compile).
-    for stale in list(MAC_ICONSET.iterdir()):
+    for stale in MAC_ICONSET.iterdir():
         if stale.suffix.lower() == ".png" or "@" in stale.name:
             stale.unlink()
     for filename, point, scale in MAC_SLOTS:

@@ -28,7 +28,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           submodules: recursive
           fetch-depth: 0
@@ -50,7 +50,7 @@ jobs:
 
       - name: Cache Bitwarden Secrets Manager CLI (bws)
         id: cache-bws
-        uses: actions/cache@v5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: ~/.local/bin/bws
           key: bws-${{ runner.os }}-${{ runner.arch }}-${{ env.BWS_VERSION }}
@@ -58,7 +58,8 @@ jobs:
       - name: Install Bitwarden Secrets Manager CLI (bws)
         if: steps.cache-bws.outputs.cache-hit != 'true'
         run: |
-          curl -L -o bws.zip "https://github.com/bitwarden/sdk/releases/download/bws-v${{ env.BWS_VERSION }}/bws-aarch64-apple-darwin-${{ env.BWS_VERSION }}.zip"
+          curl --proto '=https' --tlsv1.2 -fsSL -o bws.zip \
+            "https://github.com/bitwarden/sdk/releases/download/bws-v${{ env.BWS_VERSION }}/bws-aarch64-apple-darwin-${{ env.BWS_VERSION }}.zip"
           unzip -q bws.zip -d "$HOME/.local/bin"
           chmod +x "$HOME/.local/bin/bws"
 
@@ -66,13 +67,13 @@ jobs:
         run: bws --version
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@b3aaceaef7e0ee231b499e7b5f49c03fc1d32199 # v1.338.0
         with:
           ruby-version: "3.4"
           bundler-cache: true
 
       - name: Install Fastlane
-        run: bundle install
+        run: bundle install --frozen
 
       # Bumps CURRENT_PROJECT_VERSION once, then archives/uploads macOS and iOS
       # with that same build number. The bump commit uses [skip ci] so it does
@@ -84,7 +85,7 @@ jobs:
 
       - name: Upload Logs on Failure
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: gym-logs
           path: ~/Library/Logs/gym/*.log
