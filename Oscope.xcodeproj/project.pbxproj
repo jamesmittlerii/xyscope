@@ -217,9 +217,11 @@
 				"ENABLE_APP_SANDBOX[sdk=macosx*]" = NO;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "XY Oscilloscope";
+				INFOPLIST_KEY_CFBundleName = "XY Oscilloscope";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Oscope plots the stereo line input as an XY trace.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "XY Oscilloscope plots the stereo line input as an XY trace.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -270,10 +272,12 @@
 				"ENABLE_APP_SANDBOX[sdk=macosx*]" = YES;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "XY Oscilloscope";
+				INFOPLIST_KEY_CFBundleName = "XY Oscilloscope";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Oscope plots the stereo line input as an XY trace.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "XY Oscilloscope plots the stereo line input as an XY trace.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;

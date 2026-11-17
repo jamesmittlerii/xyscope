@@ -22,7 +22,7 @@ final class ScopeRenderer: NSObject, MTKViewDelegate {
     private let strokePipeline: MTLRenderPipelineState
     private let presentPipeline: MTLRenderPipelineState
     private let vertexBuffer: MTLBuffer
-    private let maxFrames = 4_096
+    private let maxFrames = 16_384
     private let sampleStorage: UnsafeMutablePointer<Float>
 
     private var phosphor: [MTLTexture] = []

@@ -72,10 +72,11 @@ final class SampleRing: @unchecked Sendable {
             available = head &- cursor
             broke = true
         }
+        // The stroke buffer holds one chunk. Keep the rest for the next draw and
+        // stay connected. Skipping the oldest samples here is what opened gaps
+        // when a frame ran late, which shows up on the iPad and not the Mac.
         if available > UInt64(maxFrames) {
-            cursor = head &- UInt64(maxFrames)
             available = UInt64(maxFrames)
-            broke = true
         }
 
         let count = Int(available)

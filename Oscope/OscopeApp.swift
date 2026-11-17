@@ -7,7 +7,7 @@ struct OscopeApp: App {
 
     var body: some Scene {
         #if os(macOS)
-        Window("Oscope", id: "oscope") {
+        Window("XY Oscilloscope", id: "oscope") {
             ContentView(model: model)
                 .frame(minWidth: 880, minHeight: 620)
         }

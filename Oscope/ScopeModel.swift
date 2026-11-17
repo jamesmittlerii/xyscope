@@ -173,9 +173,9 @@ final class ScopeModel: @unchecked Sendable {
 
     private static var microphoneDeniedMessage: String {
         #if os(macOS)
-        "Microphone access is off for Oscope. Turn it on in System Settings › Privacy & Security › Microphone."
+        "Microphone access is off for XY Oscilloscope. Turn it on in System Settings › Privacy & Security › Microphone."
         #else
-        "Microphone access is off for Oscope. Turn it on in Settings › Oscope › Microphone."
+        "Microphone access is off for XY Oscilloscope. Turn it on in Settings › XY Oscilloscope › Microphone."
         #endif
     }
 
