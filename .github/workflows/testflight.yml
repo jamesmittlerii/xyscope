@@ -72,9 +72,6 @@ jobs:
           ruby-version: "3.4"
           bundler-cache: true
 
-      - name: Install Fastlane
-        run: bundle install --frozen
-
       # Bumps CURRENT_PROJECT_VERSION once, then archives/uploads macOS and iOS
       # with that same build number. The bump commit uses [skip ci] so it does
       # not re-trigger this workflow.
